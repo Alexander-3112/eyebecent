@@ -59,19 +59,14 @@ class BeaconDetector: NSObject, ObservableObject, CLLocationManagerDelegate {
             }
         }
     }
-    func playSoundForNear() {
-        guard let soundURL = Bundle.main.url(forResource: "Qiu_Qiu", withExtension: "m4a") else {
-            print("Sound file not found")
-            return
-        }
+    func playSystemSoundForNear() {
+        // ID nada dering "Hero"
+        let systemSoundID: SystemSoundID = 1322
         
-        do {
-            audioPlayer = try AVAudioPlayer(contentsOf: soundURL)
-            audioPlayer?.play()
-        } catch {
-            print("Error playing sound: \(error)")
-        }
+        // Mainkan nada dering
+        AudioServicesPlaySystemSound(systemSoundID)
     }
+
 
     func stopScanning() {
         let uuid = UUID(uuidString: "2D7A9F0C-E0E8-4CC9-A71B-A21DB2D034A1")
@@ -133,28 +128,32 @@ class BeaconDetector: NSObject, ObservableObject, CLLocationManagerDelegate {
         lastDistance = distance
         didChange.send(())
         
-       switch distance {
-       case .immediate:
-           showNotification(title: "Beacon Detected", body: "You are RIGHT HERE")
-           performHapticFeedbackForNear()
-       case .near:
-           showNotification(title: "Beacon Detected", body: "You are NEAR")
-           performHapticFeedbackForNear()
-           playSoundForNear() // Play the sound when near
+        switch distance {
+        case .immediate:
+            showNotification(title: "Beacon Detected", body: "You are RIGHT HERE")
+            performHapticFeedbackForNear()
+        case .near:
+//            Task {
+                showNotification(title: "Beacon Detected", body: "You are NEAR")
+                performHapticFeedbackForNear()
+                playSystemSoundForNear() // Mainkan nada dering bawaan
+//            }
+            print("Playing system sound for NEAR")
 
-       case .far:
-           showNotification(title: "Beacon Detected", body: "You are FAR")
-           // Memulai Timer untuk getaran "far" setiap 5 detik
-           if farHapticTimer == nil {
-               farHapticTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
-                   self?.performHapticFeedbackForFar()
-               }
-           }
-       default:
-           // Hapus notifikasi jika beacon tidak terdeteksi dalam jarak tertentu
-           UNUserNotificationCenter.current().removeAllDeliveredNotifications()
-       }
-   }
+        case .far:
+            showNotification(title: "Beacon Detected", body: "You are FAR")
+            // Memulai Timer untuk getaran "far" setiap 5 detik
+            if farHapticTimer == nil {
+                farHapticTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
+                    self?.performHapticFeedbackForFar()
+                }
+            }
+        default:
+            // Hapus notifikasi jika beacon tidak terdeteksi dalam jarak tertentu
+            UNUserNotificationCenter.current().removeAllDeliveredNotifications()
+        }
+    }
+
    
    func createNearHapticPattern() throws -> CHHapticPattern {
        let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5)

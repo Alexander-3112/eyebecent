@@ -12,6 +12,7 @@
 		C24955F02AB0592D00F40628 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C24955EF2AB0592D00F40628 /* Assets.xcassets */; };
 		C24955F32AB0592D00F40628 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C24955F22AB0592D00F40628 /* Preview Assets.xcassets */; };
 		C24955FA2AB06F0D00F40628 /* BroadcastBeacon.swift in Sources */ = {isa = PBXBuildFile; fileRef = C24955F92AB06F0D00F40628 /* BroadcastBeacon.swift */; };
+		FA5F035E2AC16F65007272BD /* Qiu_Qiu.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = FA5F035D2AC16F65007272BD /* Qiu_Qiu.mp3 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -21,7 +22,8 @@
 		C24955EF2AB0592D00F40628 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C24955F22AB0592D00F40628 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		C24955F92AB06F0D00F40628 /* BroadcastBeacon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BroadcastBeacon.swift; sourceTree = "<group>"; };
-		FAF4882E2ABD84D90007C8C7 /* Qiu_Qiu.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = Qiu_Qiu.m4a; sourceTree = "<group>"; };
+		FA5F035A2AC16CA1007272BD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		FA5F035D2AC16F65007272BD /* Qiu_Qiu.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = Qiu_Qiu.mp3; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -54,10 +56,11 @@
 		C24955EA2AB0592C00F40628 /* eyebecent */ = {
 			isa = PBXGroup;
 			children = (
+				FA5F035A2AC16CA1007272BD /* Info.plist */,
 				C24955EB2AB0592C00F40628 /* eyebecentApp.swift */,
 				C24955ED2AB0592C00F40628 /* ContentView.swift */,
+				FA5F035D2AC16F65007272BD /* Qiu_Qiu.mp3 */,
 				C24955EF2AB0592D00F40628 /* Assets.xcassets */,
-				FAF4882E2ABD84D90007C8C7 /* Qiu_Qiu.m4a */,
 				C24955F12AB0592D00F40628 /* Preview Content */,
 				C24955F92AB06F0D00F40628 /* BroadcastBeacon.swift */,
 			);
@@ -132,6 +135,7 @@
 			files = (
 				C24955F32AB0592D00F40628 /* Preview Assets.xcassets in Resources */,
 				C24955F02AB0592D00F40628 /* Assets.xcassets in Resources */,
+				FA5F035E2AC16F65007272BD /* Qiu_Qiu.mp3 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -276,7 +280,8 @@
 				DEVELOPMENT_TEAM = SHFM5974XN;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "$(MARKETING_VERSION)";
+				INFOPLIST_FILE = eyebecent/Info.plist;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = 1.0;
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Beacon detection";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -308,7 +313,8 @@
 				DEVELOPMENT_TEAM = SHFM5974XN;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "$(MARKETING_VERSION)";
+				INFOPLIST_FILE = eyebecent/Info.plist;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = 1.0;
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Beacon detection";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
