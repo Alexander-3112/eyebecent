@@ -3,7 +3,6 @@ import Combine
 import CoreLocation
 import SwiftUI
 import CoreHaptics
-import UserNotifications
 import AVFoundation
 
 class BeaconDetector: NSObject, ObservableObject, CLLocationManagerDelegate {
@@ -34,6 +33,15 @@ class BeaconDetector: NSObject, ObservableObject, CLLocationManagerDelegate {
         } catch {
             print("Error initializing Core Haptics: \(error)")
         }
+        
+        // Request izin notifikasi lokal
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { (granted, error) in
+            if granted {
+                // Izin diberikan, Anda dapat menjadwalkan notifikasi
+            } else if let error = error {
+                print("Error requesting notification authorization: \(error)")
+            }
+        }
     }
     
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
@@ -59,6 +67,7 @@ class BeaconDetector: NSObject, ObservableObject, CLLocationManagerDelegate {
             }
         }
     }
+    
     func playSystemSoundForNear() {
         // ID nada dering "Hero"
         let systemSoundID: SystemSoundID = 1322
@@ -66,8 +75,7 @@ class BeaconDetector: NSObject, ObservableObject, CLLocationManagerDelegate {
         // Mainkan nada dering
         AudioServicesPlaySystemSound(systemSoundID)
     }
-
-
+    
     func stopScanning() {
         let uuid = UUID(uuidString: "2D7A9F0C-E0E8-4CC9-A71B-A21DB2D034A1")
         let constraint = CLBeaconIdentityConstraint(uuid: uuid!, major: 5, minor: 88)
@@ -109,7 +117,7 @@ class BeaconDetector: NSObject, ObservableObject, CLLocationManagerDelegate {
             print("Error playing haptic feedback for 'far': \(error)")
         }
     }
-
+    
     // Fungsi untuk melakukan getaran "near" menggunakan Core Haptics
     func performHapticFeedbackForNear() {
         guard let hapticEngine = hapticEngine else { return }
@@ -122,7 +130,6 @@ class BeaconDetector: NSObject, ObservableObject, CLLocationManagerDelegate {
             print("Error playing haptic feedback for 'near': \(error)")
         }
     }
-
     
     func update(distance: CLProximity) {
         lastDistance = distance
@@ -130,52 +137,63 @@ class BeaconDetector: NSObject, ObservableObject, CLLocationManagerDelegate {
         
         switch distance {
         case .immediate:
-            showNotification(title: "Beacon Detected", body: "You are RIGHT HERE")
+            scheduleLocalNotification(title: "Beacon Detected", body: "You are RIGHT HERE")
             performHapticFeedbackForNear()
         case .near:
-//            Task {
-                showNotification(title: "Beacon Detected", body: "You are NEAR")
-                performHapticFeedbackForNear()
-                playSystemSoundForNear() // Mainkan nada dering bawaan
-//            }
-            print("Playing system sound for NEAR")
-
+            scheduleLocalNotification(title: "Beacon Detected", body: "You are NEAR")
+            performHapticFeedbackForNear()
+            playSystemSoundForNear()
         case .far:
-            showNotification(title: "Beacon Detected", body: "You are FAR")
-            // Memulai Timer untuk getaran "far" setiap 5 detik
+            scheduleLocalNotification(title: "Beacon Detected", body: "You are FAR")
             if farHapticTimer == nil {
                 farHapticTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
                     self?.performHapticFeedbackForFar()
                 }
             }
         default:
-            // Hapus notifikasi jika beacon tidak terdeteksi dalam jarak tertentu
             UNUserNotificationCenter.current().removeAllDeliveredNotifications()
         }
     }
-
-   
-   func createNearHapticPattern() throws -> CHHapticPattern {
-       let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5)
-       let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0)
-       
-       let event1 = try CHHapticEvent(eventType: .hapticTransient, parameters: [sharpness, intensity], relativeTime: 0)
-       let event2 = try CHHapticEvent(eventType: .hapticTransient, parameters: [sharpness, intensity], relativeTime: 0.05)
-       
-       let pattern = try CHHapticPattern(events: [event1, event2], parameters: [])
-       return pattern
-   }
-   
-   func createFarHapticPattern() throws -> CHHapticPattern {
-       let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5)
-       let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0)
-       
-       let event1 = try CHHapticEvent(eventType: .hapticTransient, parameters: [sharpness, intensity], relativeTime: 0)
-       let event2 = try CHHapticEvent(eventType: .hapticTransient, parameters: [sharpness, intensity], relativeTime: 0.1)
-       
-       let pattern = try CHHapticPattern(events: [event1, event2], parameters: [])
-       return pattern
-   }
+    
+    func createNearHapticPattern() throws -> CHHapticPattern {
+        let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5)
+        let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0)
+        
+        let event1 = try CHHapticEvent(eventType: .hapticTransient, parameters: [sharpness, intensity], relativeTime: 0)
+        let event2 = try CHHapticEvent(eventType: .hapticTransient, parameters: [sharpness, intensity], relativeTime: 0.05)
+        
+        let pattern = try CHHapticPattern(events: [event1, event2], parameters: [])
+        return pattern
+    }
+    
+    func createFarHapticPattern() throws -> CHHapticPattern {
+        let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5)
+        let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0)
+        
+        let event1 = try CHHapticEvent(eventType: .hapticTransient, parameters: [sharpness, intensity], relativeTime: 0)
+        let event2 = try CHHapticEvent(eventType: .hapticTransient, parameters: [sharpness, intensity], relativeTime: 0.1)
+        
+        let pattern = try CHHapticPattern(events: [event1, event2], parameters: [])
+        return pattern
+    }
+    
+    // Fungsi untuk menjadwalkan notifikasi lokal
+    func scheduleLocalNotification(title: String, body: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = UNNotificationSound.default
+        
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+        
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { (error) in
+            if let error = error {
+                print("Error scheduling local notification: \(error)")
+            }
+        }
+    }
 }
 
 struct BigText: ViewModifier {
@@ -189,11 +207,11 @@ struct ContentView: View {
     @ObservedObject var detector = BeaconDetector()
     var advertiser = BroadcastBeacon()
     var body: some View {
-        VStack{
-            HStack{
-                Button{
+        VStack {
+            HStack {
+                Button {
                     advertiser.stopLocalBeacon()
-                    if (detector.authStatus == .authorizedWhenInUse){
+                    if (detector.authStatus == .authorizedWhenInUse) {
                         detector.startScanning()
                     }
                 } label: {
@@ -201,7 +219,7 @@ struct ContentView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 
-                Button{
+                Button {
                     detector.stopScanning()
                     advertiser.startLocalBeacon()
                 } label: {
@@ -221,8 +239,7 @@ struct ContentView: View {
                 Text("NEAR")
                     .modifier(BigText())
                     .background(.orange)
-            }
-            else if detector.lastDistance == .far {
+            } else if detector.lastDistance == .far {
                 Text("FAR")
                     .modifier(BigText())
                     .background(.blue)
@@ -240,3 +257,4 @@ struct ContentView_Previews: PreviewProvider {
         ContentView()
     }
 }
+
