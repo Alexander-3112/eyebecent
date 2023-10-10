@@ -68,6 +68,25 @@ class BeaconDetector: NSObject, ObservableObject, CLLocationManagerDelegate {
         }
     }
     
+    func scheduleBackgroundNotification(title: String, body: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = UNNotificationSound.default
+        content.userInfo = ["background": true] // Tambahkan informasi latar belakang
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+
+        UNUserNotificationCenter.current().add(request) { (error) in
+            if let error = error {
+                print("Error scheduling background notification: \(error)")
+            }
+        }
+    }
+
+    
     func playSystemSoundForNear() {
         // ID nada dering "Hero"
         let systemSoundID: SystemSoundID = 1322
@@ -99,12 +118,44 @@ class BeaconDetector: NSObject, ObservableObject, CLLocationManagerDelegate {
     
     func locationManager(_ manager: CLLocationManager, didRange beacons: [CLBeacon], satisfying beaconConstraint: CLBeaconIdentityConstraint) {
         if let beacon = beacons.first {
+            let rssi = beacon.rssi
+            let accuracy = calculateAccuracy(rssi)
+            print("Distance in meters: \(accuracy) meters")
             update(distance: beacon.proximity)
         } else {
             update(distance: .unknown)
         }
     }
     
+    // Fungsi untuk menghitung jarak berdasarkan RSSI
+    func calculateAccuracy(_ rssi: Int) -> Double {
+        let txPower = -59 // Nilai kekuatan transmisi dari beacon (biasanya -59)
+        let ratio = Double(rssi - txPower) / Double(20)
+        return pow(10.0, ratio)
+    }
+    
+    func createNearHapticPattern() throws -> CHHapticPattern {
+        let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5)
+        let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0)
+        
+        let event1 = try CHHapticEvent(eventType: .hapticTransient, parameters: [sharpness, intensity], relativeTime: 0)
+        let event2 = try CHHapticEvent(eventType: .hapticTransient, parameters: [sharpness, intensity], relativeTime: 0.05)
+        
+        let pattern = try CHHapticPattern(events: [event1, event2], parameters: [])
+        return pattern
+    }
+
+    func createFarHapticPattern() throws -> CHHapticPattern {
+        let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5)
+        let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0)
+        
+        let event1 = try CHHapticEvent(eventType: .hapticTransient, parameters: [sharpness, intensity], relativeTime: 0)
+        let event2 = try CHHapticEvent(eventType: .hapticTransient, parameters: [sharpness, intensity], relativeTime: 0.1)
+        
+        let pattern = try CHHapticPattern(events: [event1, event2], parameters: [])
+        return pattern
+    }
+
     // Fungsi untuk melakukan getaran "far" menggunakan Core Haptics
     func performHapticFeedbackForFar() {
         guard let hapticEngine = hapticEngine else { return }
@@ -134,17 +185,17 @@ class BeaconDetector: NSObject, ObservableObject, CLLocationManagerDelegate {
     func update(distance: CLProximity) {
         lastDistance = distance
         didChange.send(())
-        
+
         switch distance {
         case .immediate:
-            scheduleLocalNotification(title: "Beacon Detected", body: "You are RIGHT HERE")
+            scheduleBackgroundNotification(title: "Beacon Detected", body: "You are RIGHT HERE")
             performHapticFeedbackForNear()
         case .near:
-            scheduleLocalNotification(title: "Beacon Detected", body: "You are NEAR")
+            scheduleBackgroundNotification(title: "Beacon Detected", body: "You are NEAR")
             performHapticFeedbackForNear()
             playSystemSoundForNear()
         case .far:
-            scheduleLocalNotification(title: "Beacon Detected", body: "You are FAR")
+            scheduleBackgroundNotification(title: "Beacon Detected", body: "You are FAR")
             if farHapticTimer == nil {
                 farHapticTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
                     self?.performHapticFeedbackForFar()
@@ -153,28 +204,6 @@ class BeaconDetector: NSObject, ObservableObject, CLLocationManagerDelegate {
         default:
             UNUserNotificationCenter.current().removeAllDeliveredNotifications()
         }
-    }
-    
-    func createNearHapticPattern() throws -> CHHapticPattern {
-        let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5)
-        let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0)
-        
-        let event1 = try CHHapticEvent(eventType: .hapticTransient, parameters: [sharpness, intensity], relativeTime: 0)
-        let event2 = try CHHapticEvent(eventType: .hapticTransient, parameters: [sharpness, intensity], relativeTime: 0.05)
-        
-        let pattern = try CHHapticPattern(events: [event1, event2], parameters: [])
-        return pattern
-    }
-    
-    func createFarHapticPattern() throws -> CHHapticPattern {
-        let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5)
-        let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0)
-        
-        let event1 = try CHHapticEvent(eventType: .hapticTransient, parameters: [sharpness, intensity], relativeTime: 0)
-        let event2 = try CHHapticEvent(eventType: .hapticTransient, parameters: [sharpness, intensity], relativeTime: 0.1)
-        
-        let pattern = try CHHapticPattern(events: [event1, event2], parameters: [])
-        return pattern
     }
     
     // Fungsi untuk menjadwalkan notifikasi lokal
@@ -206,6 +235,7 @@ struct BigText: ViewModifier {
 struct ContentView: View {
     @ObservedObject var detector = BeaconDetector()
     var advertiser = BroadcastBeacon()
+    @State private var isScanning = false // Menambahkan state untuk melacak status pemindaian
     var body: some View {
         VStack {
             HStack {
@@ -213,6 +243,7 @@ struct ContentView: View {
                     advertiser.stopLocalBeacon()
                     if (detector.authStatus == .authorizedWhenInUse) {
                         detector.startScanning()
+                        isScanning = true // Setel status pemindaian menjadi true ketika mulai memindai
                     }
                 } label: {
                     Text("Scan")
@@ -222,32 +253,61 @@ struct ContentView: View {
                 Button {
                     detector.stopScanning()
                     advertiser.startLocalBeacon()
+                    isScanning = false // Setel status pemindaian menjadi false ketika berhenti memindai
                 } label: {
                     Text("Advertise")
                 }
                 .buttonStyle(.borderedProminent)
+                
+                // Tombol Stop Scanning
+                Button {
+                    detector.stopScanning()
+                    isScanning = false // Setel status pemindaian menjadi false saat tombol di tekan
+                } label: {
+                    Text("Stop Scanning")
+                }
+                .buttonStyle(.borderedProminent)
             }
-            Text(detector.scanStatus)
+            
+            // Tampilkan status pemindaian
+            Text(isScanning ? "Scanning" : "Not Scanning")
                 .modifier(BigText())
+            
             Text(advertiser.advStatus)
                 .modifier(BigText())
-            if detector.lastDistance == .immediate {
-                Text("RIGHT HERE")
-                    .modifier(BigText())
-                    .background(.red)
-            } else if detector.lastDistance == .near {
-                Text("NEAR")
-                    .modifier(BigText())
-                    .background(.orange)
-            } else if detector.lastDistance == .far {
-                Text("FAR")
-                    .modifier(BigText())
-                    .background(.blue)
-            } else {
-                Text("UNKNOWN")
-                    .modifier(BigText())
-                    .background(.gray)
-            }
+            
+            // Tampilkan status jarak deteksi beacon dalam meter
+            Text(String(format: "Distance: %.2f meters", calculateDistance(detector.lastDistance)))
+                .modifier(BigText())
+                .background(distanceBackgroundColor(detector.lastDistance))
+        }
+    }
+    
+    // Fungsi untuk menghitung jarak berdasarkan CLProximity
+    func calculateDistance(_ distance: CLProximity) -> Double {
+        switch distance {
+        case .immediate:
+            return 0.1 // Gantilah dengan jarak deteksi yang sesuai dalam meter
+        case .near:
+            return 1.0 // Gantilah dengan jarak deteksi yang sesuai dalam meter
+        case .far:
+            return 10.0 // Gantilah dengan jarak deteksi yang sesuai dalam meter
+        default:
+            return -1.0 // Nilai negatif menunjukkan status tidak diketahui atau tidak ada deteksi.
+        }
+    }
+
+    // Fungsi untuk memberikan latar belakang berdasarkan jarak deteksi
+    func distanceBackgroundColor(_ distance: CLProximity) -> Color {
+        switch distance {
+        case .immediate:
+            return .red
+        case .near:
+            return .orange
+        case .far:
+            return .blue
+        default:
+            return .gray
         }
     }
 }
@@ -257,4 +317,3 @@ struct ContentView_Previews: PreviewProvider {
         ContentView()
     }
 }
-
