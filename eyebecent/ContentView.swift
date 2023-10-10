@@ -236,37 +236,23 @@ struct ContentView: View {
     @ObservedObject var detector = BeaconDetector()
     var advertiser = BroadcastBeacon()
     @State private var isScanning = false // Menambahkan state untuk melacak status pemindaian
+    
     var body: some View {
         VStack {
-            HStack {
-                Button {
+            Toggle(isOn: $isScanning) {
+                Text(isScanning ? "Stop Scanning" : "Scan")
+            }
+            .buttonStyle(.borderedProminent)
+            .onChange(of: isScanning) { newValue in
+                if newValue {
                     advertiser.stopLocalBeacon()
                     if (detector.authStatus == .authorizedWhenInUse) {
                         detector.startScanning()
-                        isScanning = true // Setel status pemindaian menjadi true ketika mulai memindai
                     }
-                } label: {
-                    Text("Scan")
-                }
-                .buttonStyle(.borderedProminent)
-                
-                Button {
+                } else {
                     detector.stopScanning()
                     advertiser.startLocalBeacon()
-                    isScanning = false // Setel status pemindaian menjadi false ketika berhenti memindai
-                } label: {
-                    Text("Advertise")
                 }
-                .buttonStyle(.borderedProminent)
-                
-                // Tombol Stop Scanning
-                Button {
-                    detector.stopScanning()
-                    isScanning = false // Setel status pemindaian menjadi false saat tombol di tekan
-                } label: {
-                    Text("Stop Scanning")
-                }
-                .buttonStyle(.borderedProminent)
             }
             
             // Tampilkan status pemindaian
